@@ -1,0 +1,70 @@
+# Toolkit Failover Test Scenario
+# This scenario demonstrates the integration with the Cross-DC Failover Toolkit
+
+test_id: "toolkit_failover_test"
+description: "Tests application-level failover using the Cross-DC Failover Toolkit"
+
+# Application details
+streams_application_sab: "path/to/my_failover_app.sab"
+submission_params:
+  instance_id: "streams-instance-1"
+  job_name: "failover-test-job"
+  # Toolkit-specific parameters
+  crossdc.mode: "active"  # active/passive mode for the toolkit
+  crossdc.primary.dc: "dc1"
+  crossdc.secondary.dc: "dc2"
+  crossdc.replication.enabled: "true"
+  crossdc.autostart.secondary: "true"
+
+# Data exchange configuration
+pre_failover_data:
+  generator_type: "deterministic"
+  event_count: 5000
+  injection_rate_events_per_second: 100
+  input_port: "StreamsIngestPort"
+  output_port: "StreamsOutPort"
+  schema:
+    event_id: "string"
+    timestamp: "timestamp"
+    value: "number"
+    payload: "string"
+    source_dc: "string"
+  expected_data_loss_percentage: 0.5
+
+# Fault scenario
+fault_scenario:
+  type: "network_partition"
+  target: "primary_dc"
+  duration_seconds: 60
+  options:
+    interfaces: ["eth0"]
+    iptables_rules:
+      - action: "DROP"
+        direction: "outbound"
+        dst_network: "192.168.2.0/24"  # Secondary DC network
+
+# Toolkit monitoring configuration
+failover_trigger_method: "toolkit_auto"
+toolkit_monitoring:
+  timeout_seconds: 180
+  check_interval_seconds: 5
+  expected_failover_duration_seconds: 60
+
+# Test validation criteria
+expected_recovery_time_seconds: 120  # RTO target
+expected_data_loss_percentage: 0.5   # RPO target
+expected_metrics:
+  "primary_dc.status": 
+    equals: "down"
+  "secondary_dc.status":
+    equals: "up"
+  "nTuplesProcessed":
+    min: 4750  # Expect at least 95% of tuples to be processed
+
+# Reporting configuration
+reporting:
+  format: "html"
+  metrics_to_highlight:
+    - "recovery_time_seconds"
+    - "data_loss_percentage"
+    - "toolkit_status"

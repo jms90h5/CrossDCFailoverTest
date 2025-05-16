@@ -1,0 +1,69 @@
+# API-Initiated Stop Job Failover Test Scenario
+# This scenario tests failover when the primary job is stopped via the API
+
+test_id: "api_stop_job_001"
+description: "Test cross-DC failover when primary job is stopped via REST API"
+
+# Streams application bundle to test
+streams_application_sab: "applications/crossdc_sample_app.sab"
+
+# Parameters for application submission
+submission_params:
+  jobName: "CrossDCFailoverAPITest"
+  crossDCFailoverEnabled: "true"
+  primaryDataCenter: "dc1"
+  secondaryDataCenter: "dc2"
+  heartbeatIntervalSeconds: "5"
+  failoverTimeoutSeconds: "30"
+
+# Pre-failover data injection configuration
+pre_failover_data:
+  generator_type: "deterministic"
+  event_count: 5000
+  data_format: "json"
+  injection_rate_events_per_second: 100
+  batch_size: 500
+  schema:
+    event_id: "string"
+    timestamp: "timestamp"
+    value: "number"
+    payload: "string"
+
+# Fault scenario configuration
+fault_scenario:
+  type: "api_initiated"
+  api_operation: "stop_job"
+  instance_id: "streams-instance-1"
+  job_id: "{JOB_ID}"  # Will be dynamically replaced with actual job ID during test
+
+# How the failover is triggered
+failover_trigger_method: "automatic"  # The toolkit should detect and trigger failover
+
+# Validation checks after failover
+post_failover_validation_checks:
+  - type: "data_integrity"
+    description: "Verify that all data was processed correctly"
+  - type: "performance"
+    description: "Verify that processing throughput recovered"
+    threshold: 90.0  # Should recover to at least 90% of pre-failure throughput
+    metric: "tuples_per_second"
+  - type: "availability"
+    description: "Verify that application is available in secondary DC"
+
+# Recovery time objective (RTO) - how long should failover take
+expected_recovery_time_seconds: 45
+
+# Recovery point objective (RPO) - how much data loss is acceptable
+expected_data_loss_percentage: 0.5  # Up to 0.5% data loss is acceptable
+
+# Expected metrics after failover
+expected_metrics:
+  health_percentage:
+    min: 98.0
+    description: "Overall application health percentage"
+  error_rate:
+    max: 0.1
+    description: "Error rate percentage should be very low"
+  cpu_utilization:
+    max: 70.0
+    description: "CPU utilization percentage"

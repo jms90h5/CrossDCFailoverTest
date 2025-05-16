@@ -1,0 +1,89 @@
+# Example configuration for Teracloud Streams Automated Cross-DC Failover Tester
+# This file defines the global configuration for the framework
+
+# Datacenter API connection details
+datacenters:
+  primary:
+    api_url: "https://streams-api.primary-dc.example.com/v2"
+    auth_token: "$CRED:primary_api_token"
+    verify_ssl: true
+    domain_id: "default"
+    instance_id: "streams-instance-1"
+  
+  secondary:
+    api_url: "https://streams-api.secondary-dc.example.com/v2"
+    auth_token: "$CRED:secondary_api_token"
+    verify_ssl: true
+    domain_id: "default"
+    instance_id: "streams-instance-1"
+
+# Credentials (reference with $CRED:credential_name)
+# Can also reference environment variables with $ENV:ENV_VAR_NAME
+credentials:
+  primary_api_token: "$ENV:PRIMARY_API_TOKEN"
+  secondary_api_token: "$ENV:SECONDARY_API_TOKEN"
+  ssh_password: "$ENV:SSH_PASSWORD"
+
+# Fault injection configuration
+fault_injection:
+  # SSH connection details for remote operations
+  ssh:
+    username: "streams-admin"
+    private_key_path: "~/.ssh/id_rsa"
+    # password: "$CRED:ssh_password"  # Use either key or password
+    connection_timeout: 30
+    hosts:
+      primary-host:
+        hostname: "primary-host.example.com"
+        port: 22
+      secondary-host:
+        hostname: "secondary-host.example.com"
+        port: 22
+      
+  # Network fault configuration
+  network:
+    tc_available: true
+    iptables_available: true
+    interfaces:
+      primary-host: "eth0"
+      secondary-host: "eth0"
+    primary_network: "10.0.1.0/24"
+    secondary_network: "10.0.2.0/24"
+
+# Monitoring configuration
+monitoring:
+  metrics_collection_interval_seconds: 5
+  
+  # Prometheus configuration
+  prometheus:
+    primary_url: "https://prometheus.primary-dc.example.com"
+    secondary_url: "https://prometheus.secondary-dc.example.com"
+    username: "prometheus"
+    password: "$CRED:prometheus_password"
+    verify_ssl: true
+  
+  # JMX configuration
+  jmx:
+    enabled: false
+    primary_host: "jmx.primary-dc.example.com"
+    primary_port: 9999
+    secondary_host: "jmx.secondary-dc.example.com"
+    secondary_port: 9999
+
+# Data Exchange service configuration
+data_exchange:
+  endpoint_timeout_seconds: 60
+  max_batch_size: 1000
+  default_format: "json"
+
+# Data handler configuration
+data_handler:
+  validation_timeout_seconds: 300
+  storage_dir: "data"
+
+# Logging configuration
+logging:
+  console_level: "INFO"
+  file_level: "DEBUG"
+  log_format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  json_logs: false

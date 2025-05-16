@@ -1,0 +1,298 @@
+Teracloud Streams Automated Cross-DC Failover Testing Framework: Implementation and User Guide
+Document Version: 1.0
+Date: October 26, 2023
+Framework Version: 1.0 (Targeting Teracloud Streams 7.2.0 and later)
+
+1. INTRODUCTION
+
+1.1. Purpose of the Document
+This document serves as the definitive guide for the Automated Cross-DC Failover Testing Framework for Teracloud Streams, detailing implementation, deployment, configuration, and usage. It targets two audiences:
+• Senior Software Engineers and LLM-based code generation tools
+• Operational Users (SREs, QA Teams)
+
+A significant challenge is the current inaccessibility of key Teracloud Streams documentation resources. Certain sections are based on assumptions from available release notes, API best practices, and analogous systems.
+
+1.2. Overview of the Framework
+The Python-based solution automatically tests cross-datacenter failover scenarios for Teracloud Streams applications. Key functionality includes:
+• Automated application deployment
+• State management and data verification
+• Fault injection
+• Failover orchestration
+• Monitoring and metrics collection
+• Results analysis and reporting
+
+It targets Teracloud Streams 7.2.0+ with its enhanced REST API, Data Exchange service, and Cross-DC Failover Toolkit.
+
+1.3. Target Audience
+• Senior Software Engineers & LLM Tools: Need deep understanding of architecture, API interactions, and design patterns
+• Operational Users: Need practical deployment, configuration, and test execution instructions
+
+1.4. Key Technologies
+• Python 3.9+ as core language
+• Teracloud Streams 7.2.0+ with key enabling features
+• Standard libraries: requests, paramiko, tcconfig, PyYAML, etc.
+• Network tools: tc, iptables
+• Monitoring clients: Prometheus, JMX
+
+2. FRAMEWORK ARCHITECTURE AND DESIGN
+
+2.1. High-Level Architecture
+The Python Automation Framework serves as central orchestrator, interacting with Teracloud Streams in both data centers (primary and secondary).
+
+Key Interactions:
+• Control Plane: Framework communicates with REST Management API and Data Exchange Service
+• Fault Injection: Uses SSH to execute network manipulation commands
+• Monitoring: Collects metrics from Streams REST API, Prometheus, or JMX
+• Application Behavior: Tests Cross-DC Failover Toolkit capabilities
+
+2.2. Core Components
+Component | Responsibility | Key Technologies
+----------|----------------|------------------
+Orchestration Engine | Manages test lifecycle | Python
+Teracloud Streams API Client | Handles HTTP/S communication | requests
+Test Scenario Executor | Interprets test scenarios | Python, PyYAML
+Fault Injection Module | Simulates network faults | paramiko, tcconfig, python-iptables
+Monitoring and Metrics Collector | Gathers performance metrics | requests, prometheus-api-client, jmxquery
+Data Generation & Validation | Creates/validates test data | Python
+Configuration Manager | Manages configurations | PyYAML
+Reporting Module | Generates test reports | junit-xml or pytest
+Logging Module | Provides comprehensive logging | Python logging
+
+2.3. Key Design Principles
+• Modularity: Self-contained components with clear interfaces
+• Extensibility: Adaptable to new requirements
+• Idempotency: Operations produce consistent results regardless of repetition
+• Configuration-driven: Test scenarios and parameters in external files
+• Statelessness: Framework maintains minimal state between executions
+• API-first: Leverages official Teracloud Streams REST APIs
+
+2.4. Interaction Model with Teracloud Streams
+• REST Management API: For application lifecycle management
+• Data Exchange Service: For data injection and retrieval
+• Cross-DC Failover Toolkit: For application-level failover testing
+
+3. TERACLOUD STREAMS INTERFACE DEEP DIVE
+
+3.1. REST Management API
+Assumed capabilities include:
+• Authentication and authorization
+• Application deployment (SAB submission)
+• Job management (start, stop, status)
+• Instance and domain management
+• Metrics and logs retrieval
+
+3.2. Data Exchange Service
+Provides RESTful interface for:
+• Injecting tuples into running applications
+• Retrieving tuples from running applications
+• Requires specific endpoint operators in SPL applications
+
+3.3. Cross-DC Failover Toolkit
+The com.teracloud.streams.crossdcfailover toolkit enables:
+• Application-level awareness of DC status
+• State management and transfer between DCs
+• Detection of DC availability and connectivity issues
+• Coordinated activation in secondary DC upon failover
+
+4. IMPLEMENTATION GUIDE
+
+4.1. Development Environment Setup
+• Python 3.9+ required
+• OS-level packages for fault injection (iproute2, iptables)
+• Virtual environment recommended
+• Core dependencies include requests, PyYAML, paramiko, junit-xml
+• Access to Teracloud Streams 7.2.0+ environment with two simulated DCs
+
+4.2. Core Python Modules and Libraries
+
+4.2.1. HTTP Communication (requests)
+• Session objects for persistent parameters
+• Robust error handling for HTTP responses
+• Explicit timeouts for all requests
+• JSON data handling for request/response
+• Pagination handling for list endpoints
+
+4.2.2. Remote Operations (paramiko)
+• SSH connections for command execution
+• Host key management
+• Command execution and output capture
+• Error handling for SSH operations
+
+4.2.3. Network Impairment (tcconfig, python-iptables)
+• tcconfig: Simulate WAN conditions (latency, loss, bandwidth)
+• python-iptables: Create network partitions by manipulating firewall rules
+
+4.2.4. Test Orchestration
+• Parse test case definitions
+• Execute test phases (setup, pre-failover, fault, monitoring, validation, teardown)
+• Manage state transitions and component interactions
+
+4.2.5. Monitoring Hooks
+• Prometheus client for metrics collection
+• JMX query for Java-specific metrics
+• Collection of performance indicators and health status
+
+4.2.6. Configuration Management (PyYAML)
+• Framework configuration in config.yaml
+• Test scenarios in separate YAML files
+• Security considerations for YAML parsing
+
+4.2.7. Logging (logging module)
+• Structured, multi-level logging
+• Console and file output
+• Rotation for log management
+
+4.3. Test Lifecycle Automation
+
+4.3.1. Test Case Definition Schema
+Key fields include:
+• test_id: Unique identifier
+• description: Human-readable explanation
+• streams_application_sab: Path to application bundle
+• submission_params: Key-value parameters
+• pre_failover_data: Configuration for test data
+• fault_scenario: Fault injection details
+• failover_trigger_method: How failover is initiated
+• post_failover_validation_checks: Verification tests
+• expected_recovery_time_seconds: Target RTO
+• expected_data_loss_percentage: Target RPO
+
+4.3.2. Application Deployment
+• Construct REST API request with SAB file
+• Submit and handle response
+• Poll job status until stable
+
+4.3.3. Failover Testing Workflow
+• Pre-computation: Inject test data
+• Fault induction: Execute relevant commands
+• Failover monitoring: Observe toolkit behavior
+• Metrics collection: Gather performance data
+
+4.3.4. Data Validation
+• Generate deterministic, identifiable data
+• Inject before failover
+• Retrieve after failover
+• Validate consistency, integrity, and ordering
+
+4.4. Code Structure
+
+Python package organization:
+```
+teracloud_failover_tester/
+├── main.py                         # Entry point
+├── orchestrator/                   # Core execution logic
+├── streams_client/                 # Teracloud Streams API wrappers
+├── fault_injection/                # Failure simulation components
+├── monitoring/                     # Metrics collection
+├── data_handler/                   # Test data management
+├── reporting/                      # Results reporting
+├── config/                         # Configuration management
+├── utils/                          # Common utilities
+└── tests/                          # Framework tests
+├── requirements.txt                # Dependencies
+├── config.yaml.example             # Example configuration
+└── scenarios/                      # Test scenarios
+```
+
+4.5. Report Generation
+• JUnit XML format for machine-readable results
+• Custom HTML reports for human analysis
+• Mapping test outcomes to standard elements
+• Integration with CI/CD systems
+
+5. USER GUIDE
+
+5.1. Prerequisites and System Requirements
+• Framework Host: Linux recommended, Python 3.9+, network access
+• Target Environment: Teracloud Streams 7.2.0+ in two DCs
+• Network: Connectivity between framework and all Streams components
+• Authentication: API credentials for both DCs
+• Permissions: Sufficient privileges for deployment and manipulation
+
+5.2. Deployment Instructions
+• Install from provided package or repository
+• Set up Python virtual environment
+• Install dependencies
+• Configure global settings in config.yaml
+
+5.3. Configuring Test Scenarios
+• Define target environments in YAML
+• Specify failover conditions (network partition, latency, packet loss)
+• Configure test data generation or sources
+• Set validation criteria and metrics
+
+5.4. Running Failover Tests
+• Activate Python environment
+• Execute framework with scenario file
+• Monitor progress via console and logs
+• Review test results after completion
+
+5.5. Interpreting Results
+• Review framework logs for detailed execution flow
+• Analyze JUnit reports for test status
+• Evaluate key metrics:
+  - Recovery Time Objective (RTO)
+  - Recovery Point Objective (RPO)
+  - Application availability and functionality
+  - Data consistency and integrity
+  - Performance in secondary DC
+
+5.6. Troubleshooting Common Issues
+• Connectivity problems: Check network, firewalls, API endpoints
+• Authentication failures: Verify credentials and permissions
+• Fault injection errors: Test commands manually, check dependencies
+• Application deployment failures: Validate SAB file and resources
+• Test execution problems: Check logs, verify configuration
+
+6. ADVANCED TOPICS & EXTENSIBILITY
+
+6.1. CI/CD Pipeline Integration
+• Running tests automatically with deployment pipelines
+• Reporting test results for quality gates
+• Environment management for testing
+
+6.2. Custom Probes and Actions
+• Creating specialized monitoring probes
+• Implementing additional fault scenarios
+• Extending validation capabilities
+
+6.3. Framework Extension
+• Adding support for new Teracloud Streams features
+• Creating custom test scenario types
+• Enhancing reporting and metrics
+
+7. POINTS REQUIRING CLARIFICATION FROM TERACLOUD SMES
+
+7.1. REST Management API Documentation
+• Complete endpoint specifications
+• Authentication mechanisms
+• Request/response schemas
+
+7.2. Data Exchange Service Details
+• Protocol and format specifications
+• Schema validation
+• Performance characteristics
+
+7.3. Cross-DC Failover Toolkit Information
+• Configuration options and behavior
+• Status monitoring capabilities
+• Programmatic control interfaces
+
+8. APPENDIX
+
+8.1. Example Configuration Files
+• Global configuration file (config.yaml)
+• Test scenario definition (example_network_latency.yaml)
+
+8.2. Sample Teracloud Streams Application
+• Conceptual SPL code showing toolkit usage
+• Endpoint operator configuration
+• Data structure definitions
+
+8.3. Glossary of Terms
+• Cross-DC: Cross-datacenter configuration
+• RPO: Recovery Point Objective (data loss tolerance)
+• RTO: Recovery Time Objective (recovery time target)
+• SAB: Streams Application Bundle
+• PE: Processing Element
+• SPL: Streams Processing Language

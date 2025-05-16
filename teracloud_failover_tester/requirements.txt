@@ -1,0 +1,24 @@
+# Core dependencies
+pyyaml>=6.0        # Configuration and scenario parsing
+requests>=2.28.0   # HTTP/REST API communication
+paramiko>=2.11.0   # SSH for remote operations
+tcconfig>=0.28.0   # Network impairment simulation
+python-iptables>=1.0.0  # Network partition simulation
+retry>=0.9.2       # Retry logic for API operations
+jsonschema>=4.17.0 # Configuration validation
+
+# Monitoring
+prometheus-api-client>=0.5.1  # Prometheus metrics collection
+py4j>=0.10.9.5     # Java/JMX integration
+
+# Testing
+pytest>=7.3.1      # Test framework
+pytest-mock>=3.10.0  # Mocking for unit tests
+
+# Reporting
+junit-xml>=1.9     # JUnit XML report generation
+jinja2>=3.1.2      # Template engine for HTML reports
+matplotlib>=3.7.1  # Visualization for reports
+
+# Logging
+python-json-logger>=2.0.7  # JSON-formatted logging
