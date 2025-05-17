@@ -395,6 +395,58 @@ class StreamsApiClient:
             f"instances/{instance_id}/metrics/{resource_type}/{resource_id}"
         )
     
+    # Logs Operations
+    
+    def get_logs(
+        self, 
+        instance_id: str, 
+        job_id: str, 
+        max_lines: int = 100, 
+        search_keywords: Optional[List[str]] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Get logs for a specific job with optional keyword filtering.
+        
+        Args:
+            instance_id: ID of the instance
+            job_id: ID of the job
+            max_lines: Maximum number of log lines to retrieve
+            search_keywords: List of keywords to filter logs by (case-insensitive)
+            
+        Returns:
+            List of log entries
+            
+        Raises:
+            ResourceNotFoundError: If the job is not found
+        """
+        params = {
+            'size': max_lines
+        }
+        
+        # Get logs for the job
+        response = self._make_request(
+            "GET", 
+            f"instances/{instance_id}/jobs/{job_id}/logs",
+            params=params
+        )
+        
+        logs = response.get("logs", [])
+        
+        # Filter logs by keywords if specified
+        if search_keywords and logs:
+            filtered_logs = []
+            
+            for log in logs:
+                message = log.get("message", "").lower()
+                
+                # Check if any keyword is in the message
+                if any(keyword.lower() in message for keyword in search_keywords):
+                    filtered_logs.append(log)
+            
+            return filtered_logs
+        
+        return logs
+    
     # Utility Methods
     
     def wait_for_job_state(

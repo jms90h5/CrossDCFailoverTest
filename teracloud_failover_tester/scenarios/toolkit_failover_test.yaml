@@ -44,7 +44,7 @@ fault_scenario:
         dst_network: "192.168.2.0/24"  # Secondary DC network
 
 # Toolkit monitoring configuration
-failover_trigger_method: "toolkit_auto"
+failover_condition: "automatic"
 toolkit_monitoring:
   timeout_seconds: 180
   check_interval_seconds: 5

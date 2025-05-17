@@ -56,6 +56,12 @@ class CrossDCToolkitClient:
         self.remote_dc_name = config.get("remote_dc_name", "")
         self.operation_mode = config.get("operation_mode", 1)  # 1 = active, 0 = passive
         
+        # Stream detection configuration
+        self.status_stream_name = config.get("status_stream_name", "RemoteDataCenterStatus")
+        self.monitoring_enabled = config.get("monitoring_enabled", True)
+        self.log_search_keywords = config.get("log_search_keywords", 
+                                             ["failover", "data center", "backup", "secondary", "heartbeat"])
+        
         # Initialize state tracking
         self.last_known_status = None
         self.primary_datacenter_status = "unknown"
@@ -352,13 +358,44 @@ class CrossDCToolkitClient:
                 status["job_exists"] = False
                 status["status"] = "down"
             
-            # Check for toolkit-specific logs
-            try:
-                # This is just a placeholder, as we don't have direct access to RemoteDataCenterStatus stream
-                # In a real implementation, you might need to analyze logs or expose this as a metric
-                pass
-            except:
-                pass
+            # Check for toolkit-specific status through monitoring
+            if self.monitoring_enabled:
+                try:
+                    # Look for status information in application logs
+                    logs = api_client.get_logs(self.instance_id, self.job_id, 
+                                               max_lines=100, 
+                                               search_keywords=self.log_search_keywords)
+                    
+                    # Parse logs for status information
+                    if logs:
+                        for log_entry in logs:
+                            log_message = log_entry.get("message", "")
+                            
+                            # Look for failover-related log messages
+                            if "failover initiated" in log_message.lower():
+                                status["failover_initiated"] = True
+                            
+                            if "switch to secondary" in log_message.lower():
+                                status["secondary_activated"] = True
+                                
+                            if "heartbeat failed" in log_message.lower():
+                                status["heartbeat_failure"] = True
+                    
+                    # Check for stream output if available
+                    stream_metrics = self._check_status_stream(api_client, dc_type)
+                    if stream_metrics:
+                        status["stream_metrics"] = stream_metrics
+                        
+                        # Update status based on stream metrics if available
+                        if "remote_dc_available" in stream_metrics:
+                            if dc_type == "primary" and not stream_metrics["remote_dc_available"]:
+                                self.logger.info("Primary DC reports secondary DC as unavailable")
+                            elif dc_type == "secondary" and not stream_metrics["remote_dc_available"]:
+                                self.logger.info("Secondary DC reports primary DC as unavailable")
+                                
+                except Exception as e:
+                    self.logger.debug(f"Error checking status streams: {str(e)}")
+                    status["stream_check_error"] = str(e)
                 
             return status
             
@@ -449,6 +486,67 @@ class CrossDCToolkitClient:
             self.logger.warning(f"Error getting metrics for {dc_type} DC: {str(e)}")
             return {"error": str(e)}
     
+    def _check_status_stream(self, api_client: StreamsApiClient, dc_type: str) -> Dict[str, Any]:
+        """
+        Check the status of the RemoteDataCenterStatus stream provided by the toolkit.
+        
+        Args:
+            api_client: API client for the data center
+            dc_type: Data center type ("primary" or "secondary")
+            
+        Returns:
+            Dictionary with status stream metrics
+        """
+        metrics = {}
+        
+        try:
+            # Try to find the operator by name in the job
+            pes = api_client.get_pes(self.instance_id, self.job_id)
+            status_stream_pe = None
+            
+            # Look for the status stream PE
+            for pe in pes:
+                pe_name = pe.get("name", "")
+                if pe_name and self.status_stream_name in pe_name:
+                    status_stream_pe = pe
+                    break
+            
+            if not status_stream_pe:
+                return metrics
+            
+            # Get metrics for this PE
+            pe_id = status_stream_pe.get("id", "")
+            if not pe_id:
+                return metrics
+                
+            pe_metrics = api_client.get_metrics(self.instance_id, "pes", pe_id)
+            
+            # Parse metrics for status information
+            if "metrics" in pe_metrics:
+                for metric in pe_metrics["metrics"]:
+                    name = metric.get("name", "")
+                    value = metric.get("value", 0)
+                    
+                    # Look for status-related metrics
+                    if "remote" in name.lower() and "available" in name.lower():
+                        metrics["remote_dc_available"] = bool(value)
+                    
+                    if "heartbeat" in name.lower():
+                        metrics["heartbeat_received"] = bool(value)
+                    
+                    if "status" in name.lower():
+                        metrics["status_value"] = value
+                    
+                    # Track all failover metrics
+                    if "failover" in name.lower():
+                        metrics[name] = value
+            
+            return metrics
+            
+        except Exception as e:
+            self.logger.debug(f"Error checking status stream in {dc_type} DC: {str(e)}")
+            return {}
+
     def _status_changed(self, old_status: Dict[str, Any], new_status: Dict[str, Any]) -> bool:
         """
         Check if the failover status has changed.
@@ -469,6 +567,16 @@ class CrossDCToolkitClient:
             return True
             
         if old_status.get("secondary_dc_status") != new_status.get("secondary_dc_status"):
+            return True
+        
+        # Check for stream metrics changes
+        old_primary_metrics = old_status.get("primary_dc_details", {}).get("stream_metrics", {})
+        new_primary_metrics = new_status.get("primary_dc_details", {}).get("stream_metrics", {})
+        
+        if old_primary_metrics.get("remote_dc_available") != new_primary_metrics.get("remote_dc_available"):
+            return True
+            
+        if old_primary_metrics.get("heartbeat_received") != new_primary_metrics.get("heartbeat_received"):
             return True
         
         return False

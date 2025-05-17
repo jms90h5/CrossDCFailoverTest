@@ -36,8 +36,8 @@ fault_scenario:
   target_network: "10.0.2.0/24"  # Secondary DC network
   duration_seconds: 300  # How long to maintain the partition
 
-# How the failover is triggered
-failover_trigger_method: "automatic"  # The toolkit should detect and trigger failover
+# The expected failover condition
+failover_condition: "automatic"  # The toolkit should detect and trigger failover automatically
 
 # Validation checks after failover
 post_failover_validation_checks:

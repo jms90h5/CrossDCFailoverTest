@@ -296,23 +296,29 @@ class TestOrchestrator:
     def _execute_failover_monitoring_phase(self) -> Dict[str, Any]:
         """
         Execute the failover monitoring phase:
-        - Detect and monitor failover process
+        - Detect and monitor the automatic failover process
         - Track key metrics during failover
         - Record timestamps for RTO calculation
         
         Returns:
             Dictionary containing failover metrics
         """
-        self.logger.info("Monitoring failover process")
+        self.logger.info("Monitoring automatic failover process")
         failover_start_time = time.time()
         
-        # Try to use the Cross-DC Toolkit client for more accurate failover detection
+        # Check that we're using the expected failover condition (automatic)
+        failover_condition = self.test_scenario.get("failover_condition", "automatic")
+        if failover_condition != "automatic":
+            self.logger.warning(f"Unexpected failover condition: {failover_condition}. Proceeding with monitoring anyway.")
+        
+        # Use the Cross-DC Toolkit client for failover detection
         try:
             # Get initial toolkit status
             toolkit_status = self.crossdc_client.get_failover_status()
             self.logger.info(f"Initial toolkit status: {toolkit_status}")
             
-            # Monitor toolkit status for failover
+            # Monitor toolkit status for automatic failover detection
+            self.logger.info("Monitoring toolkit for automatic failover detection")
             result = self.crossdc_client.monitor_failover_status(
                 timeout_seconds=self.test_scenario.get("expected_recovery_time_seconds", 300) * 2
             )
@@ -337,6 +343,7 @@ class TestOrchestrator:
                 "recovery_time_seconds": recovery_time,
                 "expected_recovery_time_seconds": self.test_scenario.get("expected_recovery_time_seconds"),
                 "failover_completed": failover_completed,
+                "failover_condition": failover_condition,
                 "toolkit_status": result.get("final_status", {}),
                 "toolkit_metrics": toolkit_metrics
             }
@@ -365,6 +372,7 @@ class TestOrchestrator:
                 "recovery_time_seconds": recovery_time,
                 "expected_recovery_time_seconds": self.test_scenario.get("expected_recovery_time_seconds"),
                 "failover_completed": failover_completed,
+                "failover_condition": failover_condition,
                 "using_toolkit_client": False
             }
     

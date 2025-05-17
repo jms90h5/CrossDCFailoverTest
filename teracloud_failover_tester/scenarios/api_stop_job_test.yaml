@@ -36,8 +36,8 @@ fault_scenario:
   instance_id: "streams-instance-1"
   job_id: "{JOB_ID}"  # Will be dynamically replaced with actual job ID during test
 
-# How the failover is triggered
-failover_trigger_method: "automatic"  # The toolkit should detect and trigger failover
+# The expected failover condition
+failover_condition: "automatic"  # The toolkit should detect and trigger failover automatically
 
 # Validation checks after failover
 post_failover_validation_checks:
