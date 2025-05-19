@@ -1,0 +1,22 @@
+Improve documentation and reorganize repository structure
+
+This commit includes several improvements to make the framework more user-friendly:
+
+- Enhanced README with detailed Quick Start guide and better structure
+- Renamed repository from "streams" to "CrossDCFailoverTest"
+- Reorganized documentation files:
+  - Moved design and implementation .docx files to docs directory
+  - Renamed scripts/README.md to SCRIPTS_GUIDE.md for clarity
+  - Created additional specialized guides (CONSOLE_USAGE.md, RHEL9_SETUP.md)
+  - Consolidated review documents into DESIGN_REVIEW.md
+  
+- Added helper scripts to simplify common operations:
+  - setup_env.sh - Interactive environment variable setup
+  - check_status.sh - Verify configuration and prerequisites
+  - run_test.sh - Simplified test runner
+  - cleanup.sh - Tool to manage old test results
+  
+- Created archive_reviews.sh to maintain repository cleanliness
+- Updated all cross-references to match new file locations
+
+These changes make the framework more accessible for new users while preserving all the original functionality and documentation.

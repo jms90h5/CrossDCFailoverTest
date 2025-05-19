@@ -15,8 +15,49 @@ Before using the framework, ensure you have:
 3. **Network Access**: 
    - Access to both datacenter API endpoints
    - SSH access to hosts where network/process faults will be injected
+4. **Required Packages**:
+   - Python modules: pyyaml, requests
+   - For RHEL 9/CentOS: python3-pip, python3-yaml, python3-requests
 
 ## Installation
+
+### Automated Setup Using Wizard (Recommended)
+
+The easiest way to set up the framework is using our interactive setup wizard:
+
+```bash
+# Clone the repository
+git clone https://github.com/your-organization/teracloud-failover-tester.git
+cd teracloud-failover-tester
+
+# Run the setup wizard
+python3 setup_wizard.py
+```
+
+The wizard will:
+- Check prerequisites
+- Set up a virtual environment (or use system Python on RHEL/CentOS)
+- Help install dependencies
+- Guide you through configuration setup
+- Provide next steps for running tests
+
+### RHEL 9 / CentOS 9 Setup
+
+For RHEL 9 or CentOS 9 systems, you can use the system Python installation:
+
+```bash
+# Install required system packages
+sudo dnf install python3-pip python3-yaml python3-requests git
+
+# Run the setup wizard
+python3 setup_wizard.py
+```
+
+The wizard will automatically detect RHEL/CentOS systems and recommend using system Python.
+
+### Manual Installation Steps
+
+Alternatively, you can set up manually:
 
 1. Clone the repository:
    ```bash
